@@ -13,11 +13,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func bindProxy(ctx context.Context, port int) <-chan error {
+func bindProxy(ctx context.Context, port int, host string) <-chan error {
 	ch := make(chan error)
 
 	go func() {
-		c := fmt.Sprintf("-D %d -q -N -C work-pc", port)
+		c := fmt.Sprintf("-D %d -q -N -C %s", port, host)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
 
 		if err := cmd.Run(); err != nil {
@@ -111,13 +111,17 @@ func bindProxyWidget(ctx context.Context) fyne.CanvasObject {
 	btnDisconnect := widget.NewButton("Disconnect", func() {})
 	btnDisconnect.Disable()
 
+	host := widget.NewEntry()
+	host.SetPlaceHolder("work-pc")
+	host.Text = "work-pc"
+
 	btn.OnTapped = func() {
 		ctx, cancel := context.WithCancel(ctx)
 		btnDisconnect.OnTapped = cancel
 
 		btn.Disable()
 		btnDisconnect.Enable()
-		ch := bindProxy(ctx, port)
+		ch := bindProxy(ctx, port, host.Text)
 
 		go func(ch <-chan error, btn *widget.Button) {
 			err := <-ch
@@ -131,5 +135,5 @@ func bindProxyWidget(ctx context.Context) fyne.CanvasObject {
 		}(ch, btn)
 
 	}
-	return container.NewHBox(widget.NewLabel(fmt.Sprintf("Port %d", port)), btn, btnDisconnect, errLabel)
+	return container.NewHBox(widget.NewLabel(fmt.Sprintf("Port %d", port)), host, btn, btnDisconnect, errLabel)
 }

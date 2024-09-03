@@ -10,3 +10,18 @@ Requrements to build:
 
 * Go
 * gcc
+
+
+# Building
+
+Run the command to run it:
+
+```sh
+go run .
+```
+
+To build the binary, use the following one:
+
+```sh
+go run
+```
