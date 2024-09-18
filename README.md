@@ -22,5 +22,5 @@ go run .
 To build the binary, use the following one:
 
 ```sh
-go run
+go build
 ```
