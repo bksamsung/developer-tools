@@ -11,7 +11,6 @@ Requrements to build:
 * Go
 * gcc
 
-
 # Building
 
 Run the command to run it:
