@@ -17,6 +17,7 @@ func bindProxy(ctx context.Context, port int, host string) <-chan error {
 	ch := make(chan error)
 
 	go func() {
+		
 		c := fmt.Sprintf("-D %d -q -N -C %s", port, host)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
 
