@@ -6,13 +6,14 @@
 
 To be able to bind the proxy port (1080) you need to run the app as the administrator.
 
+
+
 Requrements to build:
 
 * Go
 * gcc
 
 # Building
-
 Run the command to run it:
 
 ```sh
