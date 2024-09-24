@@ -60,13 +60,14 @@ func main() {
 	a.Lifecycle().SetOnStopped(cancel)
 	w.CenterOnScreen()
 
-	hello := widget.NewLabel("Select ports you want to bind")
+	allContents := []fyne.CanvasObject{}
 
-	allContents := []fyne.CanvasObject{hello, bindProxyWidget(ctx)}
-
-	for _, port := range []int{3000, 3001, 3002, 3003, 3004, 3005, 16686 /*jaeger*/} {
-		btn := widget.NewButton("Bind it!", func() {})
-		errLabel := widget.NewLabel("")
+	for _, port := range []int{
+		3000, 3001, 3002, 3003, 3004, 3005,
+		8000, 8001, 8002, 8080, 8081, 8989,
+		9100, 9090,
+		16686 /*jaeger*/} {
+		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
 
 		btnDisconnect := widget.NewButton("Disconnect", func() {})
 		btnDisconnect.Disable()
@@ -80,23 +81,22 @@ func main() {
 			ch := bind(ctx, port)
 
 			go func(ch <-chan error, btn *widget.Button) {
-				err := <-ch
+				<-ch
 
 				btn.Enable()
 				btnDisconnect.Disable()
-				errLabel.Text = ""
-				if err != nil {
-					errLabel.Text = err.Error()
-				}
 			}(ch, btn)
 
 		}
-		cont := container.NewHBox(widget.NewLabel(fmt.Sprintf("Port %d", port)), btn, btnDisconnect, errLabel)
+		cont := container.NewHBox(btn, btnDisconnect)
 		allContents = append(allContents, cont)
 	}
 
-	w.SetContent(container.NewVBox(
-		allContents...,
+	cont := container.NewGridWithColumns(3, allContents...)
+
+	w.SetContent(container.NewGridWithColumns(1,
+		cont,
+		bindProxyWidget(ctx),
 	))
 
 	w.ShowAndRun()
@@ -105,8 +105,7 @@ func main() {
 func bindProxyWidget(ctx context.Context) fyne.CanvasObject {
 	port := 1080
 
-	btn := widget.NewButton("Bind proxy (port 1080)!", func() {})
-	errLabel := widget.NewLabel("")
+	btn := widget.NewButton("Bind proxy", func() {})
 
 	btnDisconnect := widget.NewButton("Disconnect", func() {})
 	btnDisconnect.Disable()
@@ -124,16 +123,12 @@ func bindProxyWidget(ctx context.Context) fyne.CanvasObject {
 		ch := bindProxy(ctx, port, host.Text)
 
 		go func(ch <-chan error, btn *widget.Button) {
-			err := <-ch
+			<-ch
 
 			btn.Enable()
 			btnDisconnect.Disable()
-			errLabel.Text = ""
-			if err != nil {
-				errLabel.Text = err.Error()
-			}
 		}(ch, btn)
 
 	}
-	return container.NewHBox(widget.NewLabel(fmt.Sprintf("Port %d", port)), host, btn, btnDisconnect, errLabel)
+	return container.NewVBox(host, btn, btnDisconnect)
 }
