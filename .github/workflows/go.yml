@@ -4,6 +4,8 @@
 name: Go
 
 on:
+  release:
+    types: [released]
   push:
     branches: [ "master" ]
   pull_request:
