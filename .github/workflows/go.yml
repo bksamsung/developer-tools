@@ -21,9 +21,7 @@ jobs:
         python-version: '3.10'
 
     - name: Set up MinGW
-      uses: egor-tensin/setup-mingw@v2
-      with:
-        platform: x86
+      uses: Dup4/actions-setup-gcc@v1
 
     - name: Set up Go
       uses: actions/setup-go@v4
