@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: install wget
+      run: choco install wget --no-progress 
+
     - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
