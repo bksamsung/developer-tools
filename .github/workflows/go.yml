@@ -37,8 +37,8 @@ jobs:
       run: go build .
     
     - name: upload
-      uses: actions/upload-artifact@v4
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        name: developer-tools.exe
-        path: developer-tools.exe
+        files: developer-tools.exe
        
