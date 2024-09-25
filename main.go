@@ -17,7 +17,7 @@ func bindProxy(ctx context.Context, port int, host string) <-chan error {
 	ch := make(chan error)
 
 	go func() {
-		
+
 		c := fmt.Sprintf("-D %d -q -N -C %s", port, host)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
 
@@ -93,7 +93,7 @@ func main() {
 		allContents = append(allContents, cont)
 	}
 
-	cont := container.NewGridWithColumns(3, allContents...)
+	cont := container.NewGridWithColumns(2, allContents...)
 
 	w.SetContent(container.NewGridWithColumns(1,
 		cont,
