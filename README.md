@@ -25,3 +25,5 @@ To build the binary, use the following one:
 ```sh
 go build
 ```
+
+Happy go get some feedback.
