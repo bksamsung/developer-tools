@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -20,6 +21,7 @@ func bindProxy(ctx context.Context, port int, host string) <-chan error {
 
 		c := fmt.Sprintf("-D %d -q -N -C %s", port, host)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
@@ -39,6 +41,7 @@ func bind(ctx context.Context, port int) <-chan error {
 	go func() {
 		c := fmt.Sprintf("-L %d:127.0.0.1:%d work-pc -N", port, port)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
