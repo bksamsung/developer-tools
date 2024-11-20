@@ -63,11 +63,8 @@ func main() {
 
 	allContents := []fyne.CanvasObject{}
 
-	for _, port := range []int{
-		3000, 3001, 3002, 3003, 3004, 3005,
-		8000, 8001, 8002, 8080, 8081, 8989,
-		9100, 9090,
-		16686 /*jaeger*/} {
+	accordions := widget.NewAccordion()
+	for _, port := range []int{3000, 3001, 3002, 3003, 3004, 3005, 3006} {
 		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
 
 		btnDisconnect := widget.NewButton("Disconnect", func() {})
@@ -92,11 +89,66 @@ func main() {
 		cont := container.NewHBox(btn, btnDisconnect)
 		allContents = append(allContents, cont)
 	}
+	accordions.Append(widget.NewAccordionItem("trader", container.NewGridWithColumns(2, allContents...)))
 
-	cont := container.NewGridWithColumns(2, allContents...)
+	allContents = []fyne.CanvasObject{}
+	for _, port := range []int{9100, 9090, 16686 /*jaeger*/} {
+		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
+
+		btnDisconnect := widget.NewButton("Disconnect", func() {})
+		btnDisconnect.Disable()
+
+		btn.OnTapped = func() {
+			ctx, cancel := context.WithCancel(ctx)
+			btnDisconnect.OnTapped = cancel
+
+			btn.Disable()
+			btnDisconnect.Enable()
+			ch := bind(ctx, port)
+
+			go func(ch <-chan error, btn *widget.Button) {
+				<-ch
+
+				btn.Enable()
+				btnDisconnect.Disable()
+			}(ch, btn)
+
+		}
+		cont := container.NewHBox(btn, btnDisconnect)
+		allContents = append(allContents, cont)
+	}
+	accordions.Append(widget.NewAccordionItem("observability", container.NewGridWithColumns(2, allContents...)))
+
+	allContents = []fyne.CanvasObject{}
+	for _, port := range []int{8085, 8095} {
+		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
+
+		btnDisconnect := widget.NewButton("Disconnect", func() {})
+		btnDisconnect.Disable()
+
+		btn.OnTapped = func() {
+			ctx, cancel := context.WithCancel(ctx)
+			btnDisconnect.OnTapped = cancel
+
+			btn.Disable()
+			btnDisconnect.Enable()
+			ch := bind(ctx, port)
+
+			go func(ch <-chan error, btn *widget.Button) {
+				<-ch
+
+				btn.Enable()
+				btnDisconnect.Disable()
+			}(ch, btn)
+
+		}
+		cont := container.NewHBox(btn, btnDisconnect)
+		allContents = append(allContents, cont)
+	}
+	accordions.Append(widget.NewAccordionItem("bidder", container.NewGridWithColumns(2, allContents...)))
 
 	w.SetContent(container.NewGridWithColumns(1,
-		cont,
+		accordions,
 		bindProxyWidget(ctx),
 	))
 
