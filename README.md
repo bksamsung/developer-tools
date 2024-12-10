@@ -12,6 +12,7 @@ Requrements to build:
 
 * Go
 * gcc
+* PostgreSQL
 
 # Building
 Run the command to run it:
