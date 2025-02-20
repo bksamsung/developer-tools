@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -20,6 +23,7 @@ func bindProxy(ctx context.Context, port int, host string) <-chan error {
 
 		c := fmt.Sprintf("-D %d -q -N -C %s", port, host)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
@@ -33,12 +37,14 @@ func bindProxy(ctx context.Context, port int, host string) <-chan error {
 	return ch
 }
 
-func bind(ctx context.Context, port int) <-chan error {
+func bind(ctx context.Context, source, targetPort string) <-chan error {
 	ch := make(chan error)
 
 	go func() {
-		c := fmt.Sprintf("-L %d:127.0.0.1:%d work-pc -N", port, port)
+		c := fmt.Sprintf("-L %s:127.0.0.1:%s work-pc -N", targetPort, source)
+		fmt.Println(c)
 		cmd := exec.CommandContext(ctx, "ssh", strings.Split(c, " ")...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
@@ -53,99 +59,70 @@ func bind(ctx context.Context, port int) <-chan error {
 }
 
 func main() {
-	a := app.New()
+	a := app.NewWithID("developer-tools")
 	w := a.NewWindow("Developer tools")
+
+	optionsMenu := fyne.NewMenu("Options",
+		fyne.NewMenuItem("Settings", func() {
+			openSettingsWindow(a)
+		}),
+	)
+
+	mainMenu := fyne.NewMainMenu(optionsMenu)
+	w.SetMainMenu(mainMenu)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	a.Lifecycle().SetOnStopped(cancel)
 	w.CenterOnScreen()
 
-	allContents := []fyne.CanvasObject{}
+	settings := a.Preferences().String("settings")
+	if settings == "" {
+		settings = defaultSettings
+	}
+	var config appSettings
+	if err := json.Unmarshal([]byte(settings), &config); err != nil {
+		dialog.ShowError(err, w)
+	}
 
 	accordions := widget.NewAccordion()
-	for _, port := range []int{3000, 3001, 3002, 3003, 3004, 3005, 3006} {
-		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
 
-		btnDisconnect := widget.NewButton("Disconnect", func() {})
-		btnDisconnect.Disable()
+	for name, mappings := range config.Mappings {
+		allContents := []fyne.CanvasObject{}
 
-		btn.OnTapped = func() {
-			ctx, cancel := context.WithCancel(ctx)
-			btnDisconnect.OnTapped = cancel
+		for _, mapping := range mappings {
+			btnName := fmt.Sprintf("Bind %s!", mapping.Target)
+			if mapping.Name != nil {
+				btnName = *mapping.Name
+			}
 
-			btn.Disable()
-			btnDisconnect.Enable()
-			ch := bind(ctx, port)
+			btn := widget.NewButton(btnName, func() {})
 
-			go func(ch <-chan error, btn *widget.Button) {
-				<-ch
+			btnDisconnect := widget.NewButton("Disconnect", func() {})
+			btnDisconnect.Disable()
 
-				btn.Enable()
-				btnDisconnect.Disable()
-			}(ch, btn)
+			btn.OnTapped = func() {
+				ctx, cancel := context.WithCancel(ctx)
+				btnDisconnect.OnTapped = cancel
 
+				btn.Disable()
+				btnDisconnect.Enable()
+				ch := bind(ctx, mapping.Source, mapping.Target)
+
+				go func(ch <-chan error, btn *widget.Button) {
+					<-ch
+
+					btn.Enable()
+					btnDisconnect.Disable()
+				}(ch, btn)
+
+			}
+			cont := container.NewHBox(btn, btnDisconnect)
+
+			allContents = append(allContents, cont)
 		}
-		cont := container.NewHBox(btn, btnDisconnect)
-		allContents = append(allContents, cont)
+		accordions.Append(widget.NewAccordionItem(name, container.NewGridWithColumns(2, allContents...)))
 	}
-	accordions.Append(widget.NewAccordionItem("trader", container.NewGridWithColumns(2, allContents...)))
-
-	allContents = []fyne.CanvasObject{}
-	for _, port := range []int{9100, 9090, 16686 /*jaeger*/} {
-		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
-
-		btnDisconnect := widget.NewButton("Disconnect", func() {})
-		btnDisconnect.Disable()
-
-		btn.OnTapped = func() {
-			ctx, cancel := context.WithCancel(ctx)
-			btnDisconnect.OnTapped = cancel
-
-			btn.Disable()
-			btnDisconnect.Enable()
-			ch := bind(ctx, port)
-
-			go func(ch <-chan error, btn *widget.Button) {
-				<-ch
-
-				btn.Enable()
-				btnDisconnect.Disable()
-			}(ch, btn)
-
-		}
-		cont := container.NewHBox(btn, btnDisconnect)
-		allContents = append(allContents, cont)
-	}
-	accordions.Append(widget.NewAccordionItem("observability", container.NewGridWithColumns(2, allContents...)))
-
-	allContents = []fyne.CanvasObject{}
-	for _, port := range []int{8085, 8095} {
-		btn := widget.NewButton(fmt.Sprintf("Bind %d!", port), func() {})
-
-		btnDisconnect := widget.NewButton("Disconnect", func() {})
-		btnDisconnect.Disable()
-
-		btn.OnTapped = func() {
-			ctx, cancel := context.WithCancel(ctx)
-			btnDisconnect.OnTapped = cancel
-
-			btn.Disable()
-			btnDisconnect.Enable()
-			ch := bind(ctx, port)
-
-			go func(ch <-chan error, btn *widget.Button) {
-				<-ch
-
-				btn.Enable()
-				btnDisconnect.Disable()
-			}(ch, btn)
-
-		}
-		cont := container.NewHBox(btn, btnDisconnect)
-		allContents = append(allContents, cont)
-	}
-	accordions.Append(widget.NewAccordionItem("bidder", container.NewGridWithColumns(2, allContents...)))
 
 	w.SetContent(container.NewGridWithColumns(1,
 		accordions,
